@@ -183,6 +183,29 @@ app.post('/api/reserve', async (req, res) => {
   }
 });
 
+// PATCH /api/spots/:id — update name and/or PIN
+app.patch('/api/spots/:id', async (req, res) => {
+  const { id } = req.params;
+  const { pin, new_name, new_pin } = req.body;
+  try {
+    const { rows } = await pool.query('SELECT pin_hash FROM spots WHERE id = $1', [id]);
+    if (!rows[0]?.pin_hash) return res.status(400).json({ error: 'Place non configurée' });
+    if (!await bcrypt.compare(pin, rows[0].pin_hash)) {
+      return res.status(401).json({ error: 'PIN actuel incorrect' });
+    }
+    if (new_pin) {
+      if (!/^\d{4}$/.test(new_pin)) return res.status(400).json({ error: 'Le nouveau PIN doit contenir 4 chiffres' });
+      const hash = await bcrypt.hash(new_pin, 10);
+      await pool.query('UPDATE spots SET owner_name = $1, pin_hash = $2 WHERE id = $3', [new_name || null, hash, id]);
+    } else {
+      await pool.query('UPDATE spots SET owner_name = $1 WHERE id = $2', [new_name || null, id]);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // DELETE /api/reservation/:id — cancel a reservation (spot owner PIN)
 app.delete('/api/reservation/:id', async (req, res) => {
   const { id } = req.params;

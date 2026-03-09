@@ -91,7 +91,7 @@ function getStatus(spotId, hour) {
 
 function renderCalendar() {
   const cal = document.getElementById('calendar');
-  const cols = `grid-template-columns: 100px repeat(${HOURS.length}, 52px)`;
+  const cols = `grid-template-columns: 100px repeat(${HOURS.length}, minmax(44px, 1fr))`;
 
   // Header row
   let html = `<div class="grid gap-px bg-slate-200" style="${cols}">`;
@@ -282,6 +282,32 @@ function showManageModal(spotId) {
           <input id="avail-pin" type="password" inputmode="numeric" maxlength="4" placeholder="••••" class="${inputClass}" />
         </div>
       </div>
+      <hr class="my-4 border-slate-100" />
+      <details class="group">
+        <summary class="cursor-pointer list-none flex items-center justify-between py-1">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">⚙️ Modifier mon profil</span>
+          <span class="text-slate-300 text-xs group-open:hidden">▼</span>
+          <span class="text-slate-300 text-xs hidden group-open:inline">▲</span>
+        </summary>
+        <div class="space-y-3 mt-3">
+          <div>
+            <label class="${labelClass}">Prénom affiché</label>
+            <input id="profile-name" type="text" placeholder="Ex : Marie" value="${spot.owner_name || ''}" class="${inputClass}" autocomplete="off" />
+          </div>
+          <div>
+            <label class="${labelClass}">Nouveau PIN (laisser vide pour ne pas changer)</label>
+            <input id="profile-new-pin" type="password" inputmode="numeric" maxlength="4" placeholder="••••" class="${inputClass}" />
+          </div>
+          <div>
+            <label class="${labelClass}">PIN actuel (requis)</label>
+            <input id="profile-pin" type="password" inputmode="numeric" maxlength="4" placeholder="••••" class="${inputClass}" />
+          </div>
+          <button onclick="submitUpdateProfile(${spot.id})"
+            class="w-full bg-slate-800 text-white py-2.5 rounded-xl font-semibold text-sm hover:bg-slate-700 transition-colors">
+            Sauvegarder
+          </button>
+        </div>
+      </details>
     `, [
       { label: 'Ajouter', primary: true, action: () => submitAvailability(spotId) },
       { label: 'Fermer', action: closeModal },
@@ -456,6 +482,24 @@ async function cancelReservation(resId, spotId) {
     showManageModal(spotId);
   } catch (err) {
     alert(`Erreur : ${err.message}`);
+  }
+}
+
+async function submitUpdateProfile(spotId) {
+  clearError();
+  const new_name = document.getElementById('profile-name')?.value.trim() || null;
+  const new_pin = document.getElementById('profile-new-pin')?.value || undefined;
+  const pin = document.getElementById('profile-pin')?.value;
+  if (!pin) return showError('Le PIN actuel est requis.');
+  if (new_pin && !/^\d{4}$/.test(new_pin)) return showError('Le nouveau PIN doit contenir 4 chiffres.');
+  try {
+    const body = { pin, new_name };
+    if (new_pin) body.new_pin = new_pin;
+    await api('PATCH', `/api/spots/${spotId}`, body);
+    closeModal();
+    await loadData();
+  } catch (err) {
+    showError(err.message);
   }
 }
 
