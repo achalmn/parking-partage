@@ -6,6 +6,7 @@ let currentDate = new Date();
 currentDate.setHours(0, 0, 0, 0);
 
 let state = { spots: [], availabilities: [], reservations: [] };
+let mySpotId = parseInt(localStorage.getItem('mySpotId')) || null;
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
@@ -94,26 +95,34 @@ function renderCalendar() {
   const cols = `grid-template-columns: 100px repeat(${HOURS.length}, minmax(44px, 1fr))`;
 
   // Header row
-  let html = `<div class="grid gap-px bg-slate-200" style="${cols}">`;
+  let html = `<div class="grid gap-px bg-slate-200" style="${cols}; position:relative">`;
   html += `<div class="bg-slate-50 cal-cell flex items-end px-2 pb-1.5 text-xs font-semibold text-slate-400 sticky-col">Place</div>`;
   for (const h of HOURS) {
-    html += `<div class="bg-slate-50 cal-cell flex items-end justify-center pb-1.5 text-xs text-slate-400 font-medium">${h}h</div>`;
+    html += `<div data-hour-header="${h}" class="bg-slate-50 cal-cell flex items-end justify-center pb-1.5 text-xs text-slate-400 font-medium">${h}h</div>`;
   }
 
   // Spot rows
   for (const spot of state.spots) {
+    const isPinned = mySpotId == spot.id;
     const nameHtml = spot.owner_name
       ? `<span class="text-xs text-slate-400 truncate leading-none">${spot.owner_name}</span>`
       : `<span class="text-xs text-slate-300 italic leading-none">À configurer</span>`;
 
     html += `
-      <div class="bg-white cal-cell flex flex-col justify-center px-2 gap-0.5 cursor-pointer hover:bg-indigo-50 transition-colors select-none group sticky-col"
+      <div class="${isPinned ? 'bg-indigo-50 border-l-2 border-indigo-400' : 'bg-white'} cal-cell flex flex-col justify-center px-2 gap-0.5 cursor-pointer hover:bg-indigo-50 transition-colors select-none group sticky-col"
            data-action="manage" data-spot-id="${spot.id}">
         <div class="flex items-center justify-between gap-1">
           <span class="text-sm font-bold text-indigo-700 leading-none">N°${spot.number}</span>
-          <svg class="w-3 h-3 flex-shrink-0 text-slate-300 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H8v-2.414a2 2 0 01.586-1.414z" />
-          </svg>
+          <div class="flex items-center gap-1">
+            <svg data-action="pin" data-spot-id="${spot.id}"
+              class="w-3.5 h-3.5 flex-shrink-0 transition-colors ${isPinned ? 'text-amber-400' : 'text-slate-200 group-hover:text-slate-300'}"
+              fill="${isPinned ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+            </svg>
+            <svg class="w-3 h-3 flex-shrink-0 text-slate-300 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H8v-2.414a2 2 0 01.586-1.414z" />
+            </svg>
+          </div>
         </div>
         ${nameHtml}
       </div>`;
@@ -144,6 +153,7 @@ function renderCalendar() {
   html += '</div>';
   cal.innerHTML = html;
   updateDateDisplay();
+  renderTimeMarker();
 }
 
 function updateDateDisplay() {
@@ -152,6 +162,45 @@ function updateDateDisplay() {
   today.setHours(0, 0, 0, 0);
   const isToday = currentDate.getTime() === today.getTime();
   document.getElementById('today-chip').classList.toggle('hidden', isToday);
+}
+
+// ─── Time marker ──────────────────────────────────────────────────────────────
+
+function renderTimeMarker() {
+  document.getElementById('time-marker')?.remove();
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  if (currentDate.getTime() !== today.getTime()) return;
+  const now = new Date();
+  const h = now.getHours(), mins = now.getMinutes();
+  if (h < HOURS[0] || h > HOURS[HOURS.length - 1]) return;
+  const headerCell = document.querySelector(`[data-hour-header="${h}"]`);
+  const gridDiv = document.querySelector('#calendar > div');
+  if (!headerCell || !gridDiv) return;
+  const gLeft = gridDiv.getBoundingClientRect().left;
+  const cRect = headerCell.getBoundingClientRect();
+  const left = (cRect.left - gLeft) + (mins / 60) * cRect.width;
+  const marker = document.createElement('div');
+  marker.id = 'time-marker';
+  marker.style.cssText = `position:absolute;top:0;bottom:0;left:${left}px;width:2px;background:#ef4444;opacity:0.55;pointer-events:none;z-index:6;`;
+  const dot = document.createElement('div');
+  dot.style.cssText = 'position:absolute;top:2px;left:-3px;width:8px;height:8px;border-radius:50%;background:#ef4444;opacity:0.9;';
+  marker.appendChild(dot);
+  gridDiv.appendChild(marker);
+}
+
+// ─── Toast notifications ──────────────────────────────────────────────────────
+
+function showToast(msg, type = 'success') {
+  const colors = { success: 'bg-green-600', error: 'bg-red-500', info: 'bg-indigo-600' };
+  const toast = document.createElement('div');
+  toast.className = `${colors[type] || colors.success} text-white text-sm font-semibold px-5 py-3 rounded-xl shadow-lg pointer-events-auto opacity-0 transition-opacity duration-300`;
+  toast.textContent = msg;
+  document.getElementById('toast-container').appendChild(toast);
+  requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.replace('opacity-0', 'opacity-100')));
+  setTimeout(() => {
+    toast.classList.replace('opacity-100', 'opacity-0');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
 
 // ─── Modal system ─────────────────────────────────────────────────────────────
@@ -410,6 +459,7 @@ async function submitSetup(spotId) {
   try {
     await api('POST', `/api/spots/${spotId}/setup`, { owner_name: name || null, pin });
     closeModal();
+    showToast('✓ Place configurée !');
     await loadData();
   } catch (err) {
     showError(err.message);
@@ -431,6 +481,7 @@ async function submitAvailability(spotId) {
       end_time: `${date}T${end}`,
     });
     closeModal();
+    showToast('✓ Disponibilité ajoutée');
     await loadData();
   } catch (err) {
     showError(err.message);
@@ -442,6 +493,7 @@ async function deleteAvailability(availId, spotId) {
   if (!pin) return;
   try {
     await api('DELETE', `/api/availability/${availId}`, { pin });
+    showToast('Disponibilité supprimée', 'info');
     await loadData();
     showManageModal(spotId);
   } catch (err) {
@@ -467,6 +519,7 @@ async function submitReservation(availId, spotId, availStart, availEnd) {
       end_time: `${date}T${endTime}`,
     });
     closeModal();
+    showToast('✓ Réservation confirmée !');
     await loadData();
   } catch (err) {
     showError(err.message);
@@ -478,6 +531,7 @@ async function cancelReservation(resId, spotId) {
   if (!pin) return;
   try {
     await api('DELETE', `/api/reservation/${resId}`, { pin });
+    showToast('Réservation annulée', 'info');
     await loadData();
     showManageModal(spotId);
   } catch (err) {
@@ -497,6 +551,7 @@ async function submitUpdateProfile(spotId) {
     if (new_pin) body.new_pin = new_pin;
     await api('PATCH', `/api/spots/${spotId}`, body);
     closeModal();
+    showToast('✓ Profil mis à jour');
     await loadData();
   } catch (err) {
     showError(err.message);
@@ -510,6 +565,7 @@ async function submitCancelReservation(resId) {
   try {
     await api('DELETE', `/api/reservation/${resId}`, { pin });
     closeModal();
+    showToast('Réservation annulée', 'info');
     await loadData();
   } catch (err) {
     showError(err.message);
@@ -545,6 +601,13 @@ document.getElementById('calendar-scroll').addEventListener('click', e => {
   if (!cell) return;
 
   const { action } = cell.dataset;
+  if (action === 'pin') {
+    const id = parseInt(cell.dataset.spotId);
+    mySpotId = mySpotId === id ? null : id;
+    mySpotId ? localStorage.setItem('mySpotId', mySpotId) : localStorage.removeItem('mySpotId');
+    renderCalendar();
+    return;
+  }
   if (action === 'manage') showManageModal(cell.dataset.spotId);
   if (action === 'reserve') showReserveModal(
     cell.dataset.availId,
@@ -555,6 +618,27 @@ document.getElementById('calendar-scroll').addEventListener('click', e => {
   );
   if (action === 'view-res') showReservationModal(cell.dataset.resId);
 });
+
+// ─── Swipe navigation (mobile) ────────────────────────────────────────────────
+
+let touchStartX = 0, touchStartY = 0;
+document.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+document.addEventListener('touchend', e => {
+  if (e.target.closest('#calendar-scroll')) return; // laisser le scroll horizontal intact
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    if (dx < 0) currentDate.setDate(currentDate.getDate() + 1);
+    else currentDate.setDate(currentDate.getDate() - 1);
+    loadData();
+  }
+}, { passive: true });
+
+// Rafraîchit le marqueur d'heure toutes les minutes
+setInterval(renderTimeMarker, 60_000);
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
