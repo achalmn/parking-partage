@@ -2,10 +2,24 @@ require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
+const basicAuth = require('express-basic-auth');
 const path = require('path');
 
 const app = express();
 app.use(express.json());
+
+// ─── Accès restreint aux résidents ──────────────────────────────────────────
+// Active le mot de passe partagé uniquement si ACCESS_PASSWORD est défini.
+// En local sans .env, l'app reste accessible sans mot de passe.
+if (process.env.ACCESS_PASSWORD) {
+  app.use(basicAuth({
+    authorizer: (username, password) =>
+      basicAuth.safeCompare(password, process.env.ACCESS_PASSWORD),
+    challenge: true,
+    realm: 'Parking Le Compendium',
+  }));
+}
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const pool = new Pool({
