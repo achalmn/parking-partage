@@ -95,7 +95,7 @@ function renderCalendar() {
 
   // Header row
   let html = `<div class="grid gap-px bg-slate-200" style="${cols}">`;
-  html += `<div class="bg-slate-50 cal-cell flex items-end px-2 pb-1.5 text-xs font-semibold text-slate-400">Place</div>`;
+  html += `<div class="bg-slate-50 cal-cell flex items-end px-2 pb-1.5 text-xs font-semibold text-slate-400 sticky-col">Place</div>`;
   for (const h of HOURS) {
     html += `<div class="bg-slate-50 cal-cell flex items-end justify-center pb-1.5 text-xs text-slate-400 font-medium">${h}h</div>`;
   }
@@ -107,7 +107,7 @@ function renderCalendar() {
       : `<span class="text-xs text-slate-300 italic leading-none">À configurer</span>`;
 
     html += `
-      <div class="bg-white cal-cell flex flex-col justify-center px-2 gap-0.5 cursor-pointer hover:bg-indigo-50 transition-colors select-none group"
+      <div class="bg-white cal-cell flex flex-col justify-center px-2 gap-0.5 cursor-pointer hover:bg-indigo-50 transition-colors select-none group sticky-col"
            data-action="manage" data-spot-id="${spot.id}">
         <div class="flex items-center justify-between gap-1">
           <span class="text-sm font-bold text-indigo-700 leading-none">N°${spot.number}</span>

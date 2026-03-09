@@ -12,6 +12,13 @@
     #calendar-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
     /* Hauteur fixe des cellules */
     .cal-cell { height: 48px; }
+    /* Colonne place fixe au scroll horizontal */
+    .sticky-col {
+      position: sticky;
+      left: 0;
+      z-index: 10;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.07);
+    }
     /* Animation modale */
     #modal-overlay { transition: opacity 0.15s; }
     #modal-card { transition: transform 0.2s; }
